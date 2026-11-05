@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5eff">
+<title>Laser test</title>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #16181d;
+    --muted: #5d6470;
+    --line: #e1e4ea;
+    --accent: #1f5eff;
+    --accent-text: #ffffff;
+    --ok: #1e8e4a;
+    --warn: #b36b00;
+    --bad: #c62828;
+    --code-bg: #f0f2f5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101216;
+      --card: #1a1d23;
+      --text: #eef0f3;
+      --muted: #9aa2ae;
+      --line: #2b3038;
+      --accent: #5b8cff;
+      --accent-text: #0b0d10;
+      --ok: #4cc27a;
+      --warn: #e0a03a;
+      --bad: #ff6b6b;
+      --code-bg: #14171c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 560px; margin: 0 auto; padding: 16px 16px 48px; }
+  header h1 { font-size: 1.35rem; margin: 4px 0 2px; }
+  header p { margin: 0 0 16px; color: var(--muted); font-size: .95rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .notice { border-color: var(--warn); border-width: 2px; }
+  .notice p { margin: 0; }
+  h2 {
+    font-size: 1.05rem;
+    margin: 0 0 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  h2 .count { color: var(--muted); font-weight: 500; font-size: .9rem; }
+  .steps { margin: 0; padding-left: 1.3em; }
+  .steps li { margin: 4px 0; }
+  .status { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 1.05rem; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); flex: none; }
+  [data-state=connected] .dot { background: var(--ok); }
+  [data-state=connecting] .dot { background: var(--warn); }
+  [data-state=error] .dot { background: var(--bad); }
+  .status-detail { color: var(--muted); margin: 6px 0 14px; font-size: .95rem; }
+  .status-detail:empty { display: none; }
+  button {
+    font: inherit;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--text);
+    padding: 12px 16px;
+    min-height: 48px;
+    width: 100%;
+    cursor: pointer;
+  }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+  button:disabled { opacity: .45; cursor: default; }
+  .stack > * + * { margin-top: 10px; }
+  .row { display: flex; gap: 10px; }
+  .linkish {
+    background: none;
+    border: none;
+    color: var(--accent);
+    padding: 6px 0;
+    min-height: auto;
+    width: auto;
+    text-decoration: underline;
+    font-size: .95rem;
+  }
+  .small { min-height: auto; width: auto; padding: 6px 12px; font-size: .88rem; }
+  .reading-label { color: var(--muted); font-size: .9rem; margin: 0; }
+  .big {
+    font-size: clamp(3rem, 18vw, 5.5rem);
+    font-weight: 750;
+    line-height: 1.05;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    margin: 4px 0;
+  }
+  .big small { font-size: .35em; font-weight: 600; color: var(--muted); margin-left: .2em; letter-spacing: 0; }
+  .sub { color: var(--muted); font-variant-numeric: tabular-nums; margin: 0; }
+  .hint { color: var(--muted); font-size: .88rem; margin: 8px 0 0; }
+  .readings { list-style: none; margin: 0; padding: 0; }
+  .readings li {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .readings li:first-child { border-top: none; }
+  .mm { font-weight: 700; }
+  .time { color: var(--muted); }
+  .flag { color: var(--bad); font-size: .85rem; font-weight: 600; }
+  .empty { color: var(--muted); margin: 0; }
+  details summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+  pre {
+    background: var(--code-bg);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: .78rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 50vh;
+    overflow: auto;
+    margin: 8px 0 0;
+  }
+  .toast { color: var(--ok); font-weight: 600; margin: 10px 0 0; }
+  .toast:empty { display: none; }
+  footer { text-align: center; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Laser test</h1>
+    <p>Checks that the laser sends its readings to this phone.</p>
+  </header>
+
+  <section class="card notice" id="support" hidden>
+    <p id="support-text"></p>
+  </section>
+
+  <section class="card" id="status" data-state="idle">
+    <div class="status"><span class="dot"></span><span id="status-text">Not connected</span></div>
+    <p class="status-detail" id="status-detail">Switch on the laser's Bluetooth and close MeasureOn first.</p>
+    <div class="stack">
+      <button class="primary" id="reconnect" hidden>Reconnect</button>
+      <button class="primary" id="connect">Connect to laser</button>
+      <button id="disconnect" hidden>Disconnect</button>
+    </div>
+    <button class="linkish" id="show-all">Laser not in the list? Show all nearby devices</button>
+  </section>
+
+  <section class="card">
+    <p class="reading-label">Last reading</p>
+    <div class="big" id="big">–<small>mm</small></div>
+    <p class="sub" id="sub">Waiting for the laser</p>
+    <div class="stack" style="margin-top:14px">
+      <button id="trigger" disabled>Fire laser from phone</button>
+      <button id="demo-measure" hidden>Simulate a laser button press</button>
+    </div>
+    <p class="hint">"Fire laser from phone" is an extra test. The first tap should switch the beam on and the second should take the reading. It may not work on every model.</p>
+  </section>
+
+  <section class="card">
+    <h2>How to test</h2>
+    <ol class="steps">
+      <li>Turn the laser on and switch on its Bluetooth (the Bluetooth symbol shows on its screen).</li>
+      <li>Close MeasureOn on every phone nearby. The laser only talks to one app at a time.</li>
+      <li>Tap <b>Connect to laser</b> and pick it from the list.</li>
+      <li>Press the measure button on the laser. The reading should appear here.</li>
+      <li>Check 3 or 4 readings match the laser's own screen, then tap <b>Share report</b>.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>Readings <span class="count" id="count">0</span></h2>
+    <ol class="readings" id="list"></ol>
+    <p class="empty" id="empty">No readings yet.</p>
+    <button class="small" id="clear" hidden style="margin-top:10px">Clear readings</button>
+  </section>
+
+  <section class="card">
+    <h2>Test report</h2>
+    <p class="hint" style="margin-top:0">When you've finished, send the report back so we can check what the laser sent.</p>
+    <div class="row" style="margin-top:12px">
+      <button class="primary" id="share">Share report</button>
+      <button id="copy">Copy report</button>
+    </div>
+    <p class="toast" id="toast"></p>
+    <details>
+      <summary>Technical log</summary>
+      <pre id="log"></pre>
+    </details>
+  </section>
+
+  <footer>
+    <button class="linkish" id="demo">Try it without a laser (demo)</button>
+  </footer>
+</main>
+
+<script>
+'use strict';
+
+const PAGE_VERSION = '2026-11-05';
+
+// --- protocol start ---------------------------------------------------------
+// Bosch GLM 50-27 CG over Bluetooth Low Energy. See "Laser protocol" in CLAUDE.md.
+const SERVICE_MAIN = '02a6c0d0-0451-4000-b000-fb3210111989';
+const SERVICE_ALT = '0000fde8-0000-1000-8000-00805f9b34fb'; // seen on other Bosch models
+const SERVICE_INFO = '0000180a-0000-1000-8000-00805f9b34fb';
+const DATA_CHARS = [
+  '02a6c0d1-0451-4000-b000-fb3210111989',
+  '02a6c0d2-0451-4000-b000-fb3210111989',
+];
+const INFO_MODEL = '00002a24-0000-1000-8000-00805f9b34fb';
+const INFO_FIRMWARE = '00002a26-0000-1000-8000-00805f9b34fb';
+
+const CMD_ENABLE_DATA = [0xC0, 0x55, 0x02, 0x01, 0x00, 0x1A];
+const CMD_TRIGGER = [0xC0, 0x56, 0x01, 0x00, 0x1E];
+
+// Every frame ends with a CRC-8 (polynomial 0xA6, start 0xAA) of the bytes before it.
+function crc8(bytes) {
+  let crc = 0xAA;
+  for (const b of bytes) {
+    crc ^= b;
+    for (let i = 0; i < 8; i++) crc = crc & 0x80 ? ((crc << 1) ^ 0xA6) & 0xFF : (crc << 1) & 0xFF;
+  }
+  return crc;
+}
+
+// Distance frames start C0 55 10 06; bytes 7-10 are a little-endian float in metres.
+function parseFrame(bytes) {
+  const checksumOk = bytes.length > 1 && crc8(bytes.slice(0, -1)) === bytes[bytes.length - 1];
+  const isDistance = bytes.length >= 11 &&
+    bytes[0] === 0xC0 && bytes[1] === 0x55 && bytes[2] === 0x10 && bytes[3] === 0x06;
+  if (!isDistance) return { kind: 'other', checksumOk };
+  const metres = new DataView(Uint8Array.from(bytes).buffer).getFloat32(7, true);
+  return { kind: 'distance', metres, checksumOk };
+}
+
+// Used by the demo laser so it goes through exactly the same decoding as the real one.
+function buildDistanceFrame(metres, counter) {
+  const frame = new Uint8Array(20);
+  frame.set([0xC0, 0x55, 0x10, 0x06, 0x08, counter & 0xFF, 0x05]);
+  new DataView(frame.buffer).setFloat32(7, metres, true);
+  frame[19] = crc8(frame.subarray(0, 19));
+  return frame;
+}
+// --- protocol end -----------------------------------------------------------
+
+const $ = id => document.getElementById(id);
+const ui = {
+  support: $('support'), supportText: $('support-text'),
+  status: $('status'), statusText: $('status-text'), statusDetail: $('status-detail'),
+  connect: $('connect'), reconnect: $('reconnect'), disconnect: $('disconnect'), showAll: $('show-all'),
+  big: $('big'), sub: $('sub'), trigger: $('trigger'), demoMeasure: $('demo-measure'),
+  list: $('list'), count: $('count'), empty: $('empty'), clear: $('clear'),
+  share: $('share'), copy: $('copy'), toast: $('toast'), log: $('log'), demo: $('demo'),
+};
+
+let state = 'idle';
+let device = null;
+let dataChar = null;
+let demo = null;
+let wakeLock = null;
+let found = blankFound();
+const readings = [];
+const logLines = [];
+
+function blankFound() {
+  return { name: '', model: '', firmware: '', service: '', characteristic: '', channels: [] };
+}
+
+const clock = d => d.toLocaleTimeString('en-GB', { hour12: false });
+const hex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join(' ');
+const shortUuid = uuid => uuid.slice(0, 8);
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+function log(message) {
+  logLines.push(`${clock(new Date())}  ${message}`);
+  if (logLines.length > 500) logLines.shift();
+  ui.log.textContent = logLines.join('\n');
+}
+
+function setState(next, text, detail = '') {
+  state = next;
+  ui.status.dataset.state = next;
+  ui.statusText.textContent = text;
+  ui.statusDetail.textContent = detail;
+  const busy = next === 'connecting';
+  const on = next === 'connected';
+  ui.reconnect.hidden = on || !device;
+  ui.reconnect.disabled = busy;
+  ui.connect.hidden = on;
+  ui.connect.disabled = busy;
+  ui.connect.classList.toggle('primary', !device);
+  ui.connect.textContent = device ? 'Pick a different laser' : 'Connect to laser';
+  ui.showAll.hidden = on;
+  ui.disconnect.hidden = !on;
+  ui.trigger.disabled = !on;
+  ui.demoMeasure.hidden = !(on && demo);
+}
+
+function showProblem(text) {
+  ui.supportText.textContent = text;
+  ui.support.hidden = !text;
+}
+
+function checkSupport() {
+  const apple = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  let problem = '';
+  if (!window.isSecureContext) {
+    problem = 'Bluetooth only works when this page is opened from a secure (https://) address.';
+  } else if (!navigator.bluetooth) {
+    problem = apple
+      ? 'iPhone and iPad browsers can\'t connect to Bluetooth devices. That\'s expected. This test is for Android: open the page in Chrome on an Android phone.'
+      : 'This browser can\'t connect to Bluetooth devices. On Android, open this page in Google Chrome.';
+  }
+  showProblem(problem);
+  return !problem;
+}
+
+function explain(err) {
+  const name = err && err.name;
+  if (name === 'NetworkError') {
+    setState('error', 'Could not connect',
+      'Close MeasureOn or any other app using the laser, keep the laser close, and try again.');
+  } else if (name === 'SecurityError' || name === 'NotAllowedError') {
+    setState('error', 'Chrome isn\'t allowed to use Bluetooth',
+      'In Android Settings > Apps > Chrome > Permissions, allow "Nearby devices" (and Location on older phones), then reload this page.');
+  } else {
+    setState('error', 'Something went wrong', (err && err.message) || String(err));
+  }
+}
+
+async function pickLaser(showAll) {
+  if (!checkSupport()) return;
+  stopDemo();
+  const optionalServices = [SERVICE_MAIN, SERVICE_ALT, SERVICE_INFO];
+  const options = showAll
+    ? { acceptAllDevices: true, optionalServices }
+    : { filters: [{ services: [SERVICE_MAIN] }, { services: [SERVICE_ALT] }, { namePrefix: 'GLM' }], optionalServices };
+  log(showAll ? 'Opening the list of all nearby devices' : 'Opening the list of Bosch lasers');
+  let picked;
+  try {
+    picked = await navigator.bluetooth.requestDevice(options);
+  } catch (err) {
+    log(`List closed: ${err.name}: ${err.message}`);
+    if (err.name === 'NotFoundError') {
+      setState(device ? 'disconnected' : 'idle', 'No laser picked',
+        'Check the laser\'s Bluetooth is on, then tap Connect again. If it never shows, try "Show all nearby devices".');
+    } else {
+      explain(err);
+    }
+    return;
+  }
+  device = picked;
+  device.addEventListener('gattserverdisconnected', onDisconnected);
+  found = blankFound();
+  found.name = device.name || '(no name)';
+  await openConnection();
+}
+
+async function openConnection() {
+  setState('connecting', `Connecting to ${found.name}…`, 'Keep the laser close to the phone.');
+  try {
+    const server = await device.gatt.connect();
+    log(`Connected to ${found.name} (id ${device.id})`);
+    found.channels = [];
+    dataChar = await findDataChannel(server);
+    dataChar.removeEventListener('characteristicvaluechanged', onValue);
+    dataChar.addEventListener('characteristicvaluechanged', onValue);
+    await dataChar.startNotifications();
+    log('Listening for readings');
+    await wait(500);
+    await send(CMD_ENABLE_DATA, 'switch on measurement data');
+    setState('connected', `Connected to ${found.name}`,
+      'Press the measure button on the laser. Each reading appears below.');
+    keepScreenOn();
+    readDeviceInfo(server);
+  } catch (err) {
+    log(`Connection failed: ${err.name}: ${err.message}`);
+    if (device.gatt.connected) device.gatt.disconnect();
+    explain(err);
+  }
+}
+
+async function findDataChannel(server) {
+  for (const uuid of [SERVICE_MAIN, SERVICE_ALT]) {
+    let service;
+    try {
+      service = await server.getPrimaryService(uuid);
+    } catch {
+      log(`Service ${shortUuid(uuid)} is not on this device`);
+      continue;
+    }
+    const chars = await service.getCharacteristics();
+    for (const c of chars) {
+      const flags = ['read', 'write', 'writeWithoutResponse', 'notify', 'indicate'].filter(k => c.properties[k]);
+      found.channels.push(`${shortUuid(uuid)} > ${c.uuid} [${flags.join(', ')}]`);
+      log(`Found channel ${c.uuid} [${flags.join(', ')}]`);
+    }
+    const pick = chars.find(c => DATA_CHARS.includes(c.uuid)) ||
+      chars.find(c => c.properties.indicate || c.properties.notify);
+    if (pick) {
+      found.service = uuid;
+      found.characteristic = pick.uuid;
+      log(`Using channel ${pick.uuid}`);
+      return pick;
+    }
+  }
+  throw new Error('This device has no laser data channel that we recognise.');
+}
+
+async function readDeviceInfo(server) {
+  try {
+    const service = await server.getPrimaryService(SERVICE_INFO);
+    const text = async uuid => new TextDecoder().decode(await (await service.getCharacteristic(uuid)).readValue());
+    found.model = await text(INFO_MODEL).catch(() => '');
+    found.firmware = await text(INFO_FIRMWARE).catch(() => '');
+    log(`Model "${found.model || '?'}", firmware "${found.firmware || '?'}"`);
+  } catch {
+    log('No device information available');
+  }
+}
+
+async function send(bytes, why) {
+  const data = Uint8Array.from(bytes);
+  log(`Sent ${hex(data)} (${why})`);
+  if (demo) return demo.receive(data);
+  if (dataChar.properties.write && dataChar.writeValueWithResponse) {
+    await dataChar.writeValueWithResponse(data);
+  } else if (dataChar.properties.writeWithoutResponse && dataChar.writeValueWithoutResponse) {
+    await dataChar.writeValueWithoutResponse(data);
+  } else {
+    await dataChar.writeValue(data);
+  }
+}
+
+function onValue(event) {
+  const view = event.target.value;
+  handleBytes(new Uint8Array(view.buffer, view.byteOffset, view.byteLength));
+}
+
+function handleBytes(bytes) {
+  const frame = parseFrame(bytes);
+  log(`Received ${hex(bytes)}${frame.checksumOk ? '' : '  (checksum does not match)'}`);
+  if (frame.kind !== 'distance') return;
+  if (!Number.isFinite(frame.metres) || frame.metres <= 0) {
+    log('Distance frame without a usable value');
+    return;
+  }
+  readings.unshift({
+    metres: frame.metres,
+    mm: Math.round(frame.metres * 1000),
+    time: new Date(),
+    checksumOk: frame.checksumOk,
+  });
+  renderReadings();
+  if (navigator.vibrate) navigator.vibrate(40);
+}
+
+function renderReadings() {
+  const last = readings[0];
+  ui.big.firstChild.textContent = last ? String(last.mm) : '–';
+  ui.sub.textContent = last
+    ? `${last.metres.toFixed(3)} m · ${clock(last.time)}${last.checksumOk ? '' : ' · checksum wrong, don\'t trust this one'}`
+    : 'Waiting for the laser';
+  ui.count.textContent = String(readings.length);
+  ui.empty.hidden = readings.length > 0;
+  ui.clear.hidden = readings.length === 0;
+  ui.list.replaceChildren(...readings.map((r, i) => {
+    const li = document.createElement('li');
+    const left = document.createElement('span');
+    const mm = document.createElement('span');
+    mm.className = 'mm';
+    mm.textContent = `${readings.length - i}.  ${r.mm} mm`;
+    left.append(mm);
+    if (!r.checksumOk) {
+      const flag = document.createElement('span');
+      flag.className = 'flag';
+      flag.textContent = '  checksum wrong';
+      left.append(flag);
+    }
+    const time = document.createElement('span');
+    time.className = 'time';
+    time.textContent = clock(r.time);
+    li.append(left, time);
+    return li;
+  }));
+}
+
+function onDisconnected(event) {
+  if (event.target !== device) return;
+  log('Laser disconnected');
+  releaseScreen();
+  if (state === 'connected') {
+    setState('disconnected', 'Laser disconnected',
+      'It may have switched itself off. Turn it back on and tap Reconnect.');
+  }
+}
+
+async function keepScreenOn() {
+  try {
+    if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+  } catch {
+    // Not important for the test; the screen may dim as usual.
+  }
+}
+
+function releaseScreen() {
+  if (wakeLock) wakeLock.release().catch(() => {});
+  wakeLock = null;
+}
+
+// A pretend laser for checking the page without hardware. It never touches Bluetooth.
+function startDemo() {
+  if (device && device.gatt.connected) device.gatt.disconnect();
+  device = null;
+  let counter = 0;
+  let beamOn = false;
+  demo = {
+    receive(bytes) {
+      if (bytes[1] !== 0x56) return;
+      if (!beamOn) {
+        beamOn = true;
+        log('Demo laser: beam on');
+      } else {
+        beamOn = false;
+        demo.press();
+      }
+    },
+    press() {
+      handleBytes(buildDistanceFrame(0.3 + Math.random() * 5, counter++));
+    },
+  };
+  found = blankFound();
+  found.name = 'Demo laser (not real)';
+  log('Demo started. Nothing here comes from a real laser.');
+  setState('connected', 'Demo laser connected', 'This is pretend. Tap "Simulate a laser button press" to make a reading.');
+}
+
+function stopDemo() {
+  if (!demo) return;
+  demo = null;
+  log('Demo stopped');
+}
+
+function buildReport() {
+  const lines = [
+    'Laser test report',
+    `Page version: ${PAGE_VERSION}`,
+    `Date: ${new Date().toString()}`,
+    `Browser: ${navigator.userAgent}`,
+  ];
+  if (demo) lines.push('MODE: DEMO, no real laser');
+  lines.push(
+    `Laser name: ${found.name || '-'}`,
+    `Model: ${found.model || '-'}   Firmware: ${found.firmware || '-'}`,
+    `Data service: ${found.service || '-'}`,
+    `Data channel: ${found.characteristic || '-'}`,
+    'Channels seen:',
+    ...(found.channels.length ? found.channels.map(c => `  ${c}`) : ['  -']),
+    '',
+    `Readings (${readings.length}), oldest first:`,
+    ...readings.slice().reverse().map((r, i) =>
+      `  ${i + 1}. ${r.mm} mm  (${r.metres.toFixed(4)} m)  ${clock(r.time)}${r.checksumOk ? '' : '  CHECKSUM WRONG'}`),
+    '',
+    'Log:',
+    ...logLines,
+  );
+  return lines.join('\n');
+}
+
+function toast(text) {
+  ui.toast.textContent = text;
+  setTimeout(() => { if (ui.toast.textContent === text) ui.toast.textContent = ''; }, 4000);
+}
+
+async function copyReport() {
+  try {
+    await navigator.clipboard.writeText(buildReport());
+    toast('Report copied. Paste it into a message.');
+  } catch {
+    ui.log.textContent = buildReport();
+    ui.log.parentElement.open = true;
+    toast('Couldn\'t copy automatically. The report is in the technical log below.');
+  }
+}
+
+ui.connect.addEventListener('click', () => pickLaser(false));
+ui.showAll.addEventListener('click', () => pickLaser(true));
+ui.reconnect.addEventListener('click', () => { stopDemo(); openConnection(); });
+ui.disconnect.addEventListener('click', () => {
+  releaseScreen();
+  if (demo) {
+    stopDemo();
+    setState('idle', 'Not connected');
+    return;
+  }
+  setState('disconnected', 'Disconnected');
+  device.gatt.disconnect();
+});
+ui.trigger.addEventListener('click', () => send(CMD_TRIGGER, 'fire laser').catch(err => {
+  log(`Fire command failed: ${err.name}: ${err.message}`);
+  ui.statusDetail.textContent = 'The laser didn\'t accept "Fire laser from phone". That\'s fine: use its own button.';
+}));
+ui.demoMeasure.addEventListener('click', () => demo && demo.press());
+ui.demo.addEventListener('click', startDemo);
+ui.clear.addEventListener('click', () => {
+  readings.length = 0;
+  renderReadings();
+  log('Readings cleared');
+});
+ui.copy.addEventListener('click', copyReport);
+ui.share.addEventListener('click', async () => {
+  if (!navigator.share) return copyReport();
+  try {
+    await navigator.share({ title: 'Laser test report', text: buildReport() });
+  } catch (err) {
+    if (err.name !== 'AbortError') copyReport();
+  }
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state === 'connected' && !demo) keepScreenOn();
+});
+
+log(`Page ${PAGE_VERSION} loaded`);
+if (checkSupport() && navigator.bluetooth.getAvailability) {
+  navigator.bluetooth.getAvailability().then(available => {
+    if (!available) showProblem('Bluetooth looks switched off on this phone. Turn it on, then reload this page.');
+  });
+}
+</script>
+</body>
+</html>
